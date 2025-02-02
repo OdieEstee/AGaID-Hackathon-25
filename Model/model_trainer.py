@@ -7,6 +7,7 @@ import matplotlib.patches as patches
 import yaml
 from sklearn.model_selection import train_test_split
 from shutil import copy
+import time
 
 # For training with ultralytics YOLO (make sure to install ultralytics)
 from ultralytics import YOLO
@@ -275,7 +276,7 @@ def convert_sunlit_shaded_only(processed_basenames):
             with open(yolo_txt_path, 'w') as f:
                 f.write("\n".join(yolo_lines))
             print("Saved YOLO annotation for sunlit-only file:", yolo_txt_path)
-            show_image_feedback(image_path, annotations)
+            #show_image_feedback(image_path, annotations)
             extra_samples.append((image_path, yolo_txt_path))
 
     return extra_samples
@@ -364,6 +365,7 @@ def train_yolov9():
 
 # --- Main Function ---
 def main():
+    start_time = time.time()
     # Create labels directories *before* conversion
     os.makedirs(os.path.join(BASE_DIR, "labels", "train"), exist_ok=True)
     os.makedirs(os.path.join(BASE_DIR, "labels", "val"), exist_ok=True)
@@ -373,19 +375,7 @@ def main():
 
     all_samples = samples1 + samples2
     print(f"\nTotal samples converted: {len(all_samples)}")
-
-    # Optionally, show one final example image.
-    if all_samples:
-        example_img, _ = all_samples[0]
-        img = cv2.imread(example_img)
-        if img is not None:
-            plt.figure(figsize=(6, 6))
-            plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-            plt.title("Example Image")
-            plt.axis("off")
-            plt.show(block=False)
-            plt.pause(2)
-            plt.close()
+    print(f"\nTotal time elapsed for sample conversion: {(time.time() - start_time) / 60:.2f} minutes")
 
     # Split the dataset and organize images and labels into train/val directories.
     train_images_dir, val_images_dir, train_labels_dir, val_labels_dir = split_dataset(all_samples, test_size=0.2)
@@ -397,6 +387,7 @@ def main():
     print("Starting YOLOv9 training for 4-class detection...")
     train_yolov9()
     print("Training complete.")
+    print(f"\nTotal time elapsed for sample conversion and training: {(time.time() - start_time) / 60:.2f} minutes")
 
 if __name__ == "__main__":
     main()
