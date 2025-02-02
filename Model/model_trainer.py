@@ -13,7 +13,8 @@ from ultralytics import YOLO
 
 # Set your base directory (adjust if needed)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
+USE_CUDA = cv2.cuda.getCudaEnabledDeviceCount() > 0
+DEVICE = 'cuda' if USE_CUDA else 'cpu'
 # Define class names (for visualization and dataset YAML)
 CLASS_NAMES = {
     0: "Residue Sunlit",
@@ -22,6 +23,24 @@ CLASS_NAMES = {
     3: "Background Shaded"
 }
 CLASS_LIST = [CLASS_NAMES[i] for i in range(4)]  # for dataset YAML
+
+def load_image_cuda(image_path):
+    if USE_CUDA:
+        return cv2.cuda.GpuMat(cv2.imread(image_path, cv2.IMREAD_GRAYSCALE))
+    return cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+
+def threshold_cuda(image_gpu):
+    if USE_CUDA:
+        return cv2.cuda.threshold(image_gpu, 127, 255, cv2.THRESH_BINARY)[1]
+    return cv2.threshold(image_gpu, 127, 255, cv2.THRESH_BINARY)[1]
+
+def find_contours_cuda(image_gpu):
+    if USE_CUDA:
+        image_cpu = image_gpu.download()
+    else:
+        image_cpu = image_gpu
+    contours, _ = cv2.findContours(image_cpu, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    return contours
 
 # --- Helper Functions for File Renaming ---
 def add_res_suffix(directory):
@@ -130,8 +149,8 @@ def convert_to_yolo_format_combined():
             missing_sunlit += 1
             continue
 
-        residue_mask = cv2.imread(tif_file, cv2.IMREAD_GRAYSCALE)
-        sunlit_mask = cv2.imread(sunlit_path, cv2.IMREAD_GRAYSCALE)
+        residue_mask = load_image_cuda(tif_file)
+        sunlit_mask = load_image_cuda(sunlit_path)
         if residue_mask is None:
             print(f"💀 Failed to read residue mask: {tif_file}")
             invalid_masks += 1
@@ -142,12 +161,12 @@ def convert_to_yolo_format_combined():
             continue
 
         # Threshold masks (assumes >127 as positive)
-        _, residue_bin = cv2.threshold(residue_mask, 127, 255, cv2.THRESH_BINARY)
-        _, sunlit_bin = cv2.threshold(sunlit_mask, 127, 255, cv2.THRESH_BINARY)
+        _, residue_bin = threshold_cuda(residue_mask)
+        _, sunlit_bin = threshold_cuda(sunlit_mask)
 
         # Generate annotations for residue areas:
         annotations = []
-        residue_contours, _ = cv2.findContours(residue_bin, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        residue_contours, _ = find_contours_cuda(residue_bin)
         for cnt in residue_contours:
             x, y, w, h = cv2.boundingRect(cnt)
             region = sunlit_bin[y:y+h, x:x+w]
@@ -156,8 +175,8 @@ def convert_to_yolo_format_combined():
             annotations.append((class_id, x, y, w, h))
 
         # Generate annotations for background areas using the inverse of residue mask:
-        background_bin = cv2.bitwise_not(residue_bin)
-        background_contours, _ = cv2.findContours(background_bin, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        background_bin = cv2.cuda.bitwise_not(residue_bin) if USE_CUDA else cv2.bitwise_not(residue_bin)
+        background_contours, _ = find_contours_cuda(background_bin)
         for cnt in background_contours:
             x, y, w, h = cv2.boundingRect(cnt)
             region = sunlit_bin[y:y+h, x:x+w]
@@ -327,10 +346,10 @@ def train_yolov9():
     model = YOLO(pretrained_weights)
     results = model.train(
         data=dataset_yaml,
-        epochs=2,
+        epochs=5,
         imgsz=512,
-        batch=8,
-        device='cpu',  # change if needed
+        batch=16,
+        device=DEVICE,
         project=os.path.join(BASE_DIR, "results"),
         name="yolov9_4class"
     )
