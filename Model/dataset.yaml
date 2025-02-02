@@ -1,7 +1,0 @@
-names:
-- Residue Sunlit
-- Residue Shaded
-- Background Sunlit
-- Background Shaded
-train: /Users/odieestee/Documents/AGaID-Hackathon-25/Model/images/train
-val: /Users/odieestee/Documents/AGaID-Hackathon-25/Model/images/val
