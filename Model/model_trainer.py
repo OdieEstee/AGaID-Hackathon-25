@@ -161,12 +161,12 @@ def convert_to_yolo_format_combined():
             continue
 
         # Threshold masks (assumes >127 as positive)
-        _, residue_bin = threshold_cuda(residue_mask)
-        _, sunlit_bin = threshold_cuda(sunlit_mask)
+        residue_bin = threshold_cuda(residue_mask)
+        sunlit_bin = threshold_cuda(sunlit_mask)
 
         # Generate annotations for residue areas:
         annotations = []
-        residue_contours, _ = find_contours_cuda(residue_bin)
+        residue_contours = find_contours_cuda(residue_bin)
         for cnt in residue_contours:
             x, y, w, h = cv2.boundingRect(cnt)
             region = sunlit_bin[y:y+h, x:x+w]
@@ -176,7 +176,7 @@ def convert_to_yolo_format_combined():
 
         # Generate annotations for background areas using the inverse of residue mask:
         background_bin = cv2.cuda.bitwise_not(residue_bin) if USE_CUDA else cv2.bitwise_not(residue_bin)
-        background_contours, _ = find_contours_cuda(background_bin)
+        background_contours = find_contours_cuda(background_bin)
         for cnt in background_contours:
             x, y, w, h = cv2.boundingRect(cnt)
             region = sunlit_bin[y:y+h, x:x+w]
