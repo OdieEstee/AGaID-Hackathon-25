@@ -107,7 +107,7 @@ def convert_to_yolo_format_combined():
     residue_files = glob.glob(os.path.join(residue_dir, '**/*_res.tif'), recursive=True)
     print(f"Found {len(residue_files)} residue files")
 
-    for tif_file in residue_files:
+    for tif_file in residue_files[:5]:
         print(f"\nProcessing residue mask: {tif_file}")
         rel_path = os.path.relpath(tif_file, residue_dir)
         base_name = os.path.basename(tif_file).replace('_res.tif', '')
@@ -190,7 +190,7 @@ def convert_to_yolo_format_combined():
             print("No annotations generated for:", tif_file)
 
         # Show feedback
-        show_image_feedback(image_path, annotations)
+        #show_image_feedback(image_path, annotations)
         processed += 1
         all_samples.append((image_path, yolo_txt_path))
 
@@ -209,7 +209,7 @@ def convert_sunlit_shaded_only(processed_basenames):
     sunlit_files = glob.glob(os.path.join(sunlit_dir, '**/*_sunshade.tif'), recursive=True)
     print(f"Found {len(sunlit_files)} sunlit_shaded files")
 
-    for tif_file in sunlit_files:
+    for tif_file in sunlit_files[:5]:
         base_name = os.path.basename(tif_file).replace('_sunshade.tif', '')
         if base_name in processed_basenames:
             continue
@@ -327,7 +327,7 @@ def train_yolov9():
     model = YOLO(pretrained_weights)
     results = model.train(
         data=dataset_yaml,
-        epochs=20,
+        epochs=2,
         imgsz=512,
         batch=8,
         device='cpu',  # change if needed
