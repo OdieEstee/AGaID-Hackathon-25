@@ -126,7 +126,7 @@ def convert_to_yolo_format_combined():
     residue_files = glob.glob(os.path.join(residue_dir, '**/*_res.tif'), recursive=True)
     print(f"Found {len(residue_files)} residue files")
 
-    for tif_file in residue_files[:5]:
+    for tif_file in residue_files:
         print(f"\nProcessing residue mask: {tif_file}")
         rel_path = os.path.relpath(tif_file, residue_dir)
         base_name = os.path.basename(tif_file).replace('_res.tif', '')
@@ -228,7 +228,7 @@ def convert_sunlit_shaded_only(processed_basenames):
     sunlit_files = glob.glob(os.path.join(sunlit_dir, '**/*_sunshade.tif'), recursive=True)
     print(f"Found {len(sunlit_files)} sunlit_shaded files")
 
-    for tif_file in sunlit_files[:5]:
+    for tif_file in sunlit_files:
         base_name = os.path.basename(tif_file).replace('_sunshade.tif', '')
         if base_name in processed_basenames:
             continue
